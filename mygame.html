@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="dark light">
+<title>GUARDIAN // MATRIX PROTOCOL</title>
+
+<style>
+:root{
+  --bg:#061210; --grid:#113128; --glass:rgba(10,24,20,.66);
+  --chip:#19e9b0; --chip2:#10c997; --txt:#e8fff5; --muted:#9fd5c4;
+  --r:16px; --shadow:0 16px 38px rgba(0,0,0,.45);
+}
+*{box-sizing:border-box} html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--txt);
+     font:500 16px/1.45 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial;
+     letter-spacing:.2px; overflow-x:hidden; padding-bottom:env(safe-area-inset-bottom)}
+/* Слой матрицы — не перехватывает клики */
+#matrix{position:fixed; inset:0; z-index:0; pointer-events:none; background:#020a08}
+.grid{position:fixed; inset:0; z-index:1; pointer-events:none;
+      background:
+      linear-gradient(transparent 31px, rgba(22,241,182,.06) 32px) 0 0/34px 34px,
+      linear-gradient(90deg,transparent 31px, rgba(22,241,182,.06) 32px) 0 0/34px 34px;
+      opacity:.45; mix-blend-mode:screen}
+.wrap{position:relative; z-index:2; max-width:1024px; margin:0 auto; padding:22px 14px 18px}
+
+/* Заголовок */
+.h1{font-size:12px; font-weight:800; color:var(--muted); letter-spacing:.16em; text-transform:uppercase}
+.title{display:flex; flex-wrap:wrap; gap:12px 12px; align-items:baseline;
+       font-weight:900; letter-spacing:.08em; text-transform:uppercase;
+       font-size:clamp(22px,6vw,34px); margin:8px 0 10px}
+.status{background:linear-gradient(90deg,var(--chip),var(--chip2)); color:#06261d;
+        padding:.18em .6em; border-radius:.6em; box-shadow:var(--shadow)}
+
+/* Кнопки */
+.controls{display:grid; gap:12px; grid-template-columns:repeat(3,minmax(0,1fr)); margin:12px 0}
+@media (min-width:860px){ .controls{grid-template-columns:repeat(6,minmax(0,1fr))} }
+.btn,.btn:visited{
+  appearance:none; border:0; border-radius:14px; width:100%; height:56px;
+  display:inline-flex; align-items:center; justify-content:center; gap:.6em;
+  text-decoration:none; color:#04261b; font-weight:800; letter-spacing:.05em;
+  background:linear-gradient(180deg,#2af0c1,#0fe0a3);
+  box-shadow:0 6px 18px rgba(20,210,160,.35), inset 0 0 0 1px rgba(255,255,255,.12);
+  transition:transform .06s ease, filter .12s ease; -webkit-tap-highlight-color:transparent
+}
+.btn:active{transform:translateY(1px) scale(.995)}
+.btn.ghost{color:var(--muted); background:linear-gradient(180deg,rgba(22,241,182,.12),rgba(22,241,182,.08)); box-shadow:none; border:1px solid rgba(22,241,182,.22)}
+.btn.secondary{background:linear-gradient(180deg,#d6fff4,#a5ffe5)}
+.btn.small{height:48px; font-weight:900}
+.btn.tiktok{
+  color:#eaf7ff;
+  background:
+    radial-gradient(120% 140% at 0% 0%, #25F4EE 0 25%, transparent 26%),
+    radial-gradient(120% 140% at 100% 0%, #FE2C55 0 25%, transparent 26%),
+    linear-gradient(180deg,#142026,#0b171c);
+  box-shadow:0 8px 22px rgba(37,244,238,.25), 0 8px 22px rgba(254,44,85,.18), inset 0 0 0 1px rgba(255,255,255,.12)
+}
+.ico{width:18px;height:18px;display:inline-block}
+
+/* Герой-блок с фото */
+.hero{margin:8px 0 14px; border-radius:var(--r); overflow:hidden;
+      border:1px solid rgba(22,241,182,.22); box-shadow:var(--shadow)}
+.hero-img{display:block; width:100%; height:36vh; min-height:240px; object-fit:cover; object-position:center;
+          background:radial-gradient(900px 360px at 50% -5%, rgba(23,214,161,.25), transparent 60%), #08201b}
+
+/* Радар + лог */
+.pane{display:grid; grid-template-columns:1fr; gap:14px}
+@media (min-width:880px){ .pane{grid-template-columns:minmax(0,1fr) minmax(0,1.05fr)} }
+.card{background:var(--glass); border:1px solid rgba(22,241,182,.24); border-radius:var(--r); box-shadow:var(--shadow); position:relative; overflow:hidden}
+.card.pad{padding:14px}
+.card::before{content:"PROTECTED"; position:absolute; left:16px; bottom:12px; letter-spacing:.32em; font-weight:900; color:#a6ffe9; opacity:.14; font-size:14px}
+#radar{width:100%; height:260px; display:block; background:rgba(6,24,20,.25); border-radius:12px}
+.console{max-height:360px; min-height:220px; overflow:auto; padding:14px;
+         font:600 14px/1.6 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.log-line{color:#c9ffe8}.log-line .g{color:#77ffcc}.log-line .y{color:#ffeb99}.log-line .e{color:#ffb1b1}
+@media (max-width:400px){ .console{font-size:13px} .btn{height:54px} }
+</style>
+</head>
+<body>
+
+<!-- Матрица -->
+<canvas id="matrix"></canvas>
+<div class="grid"></div>
+
+<div class="wrap">
+  <div class="h1">GUARDIAN // MATRIX PROTOCOL</div>
+  <div class="title">TARGET: RISA — STATUS: <span id="chip" class="status">PROTECTED</span></div>
+
+  <!-- Кнопки (все кликаются; никаких перекрытий) -->
+  <div class="controls">
+    <button id="bShield" class="btn">Activate Shield</button>
+    <button id="bPulse"  class="btn secondary">EMP Pulse</button>
+    <button id="bSilent" class="btn ghost">Silent Mode</button>
+
+    <a class="btn" href="https://t.me/WEBBOY7IL" target="_blank" rel="noopener">Telegram</a>
+
+    <!-- Чистая универсальная ссылка TikTok -->
+    <a class="btn tiktok" id="btnTikTok"
+       href="https://www.tiktok.com/@risa91xi.z?_t=ZS-8zhVbuqt1Ro&_r=1"
+       target="_blank" rel="noopener noreferrer">
+      <span class="ico" aria-hidden="true">
+        <svg viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg">
+          <path fill="#25F4EE" d="M208 88.3c-20.9 0-40.1-8.5-55-22.6v78.3c0 33-26.8 59.7-59.7 59.7S33.7 177 33.7 144.1s26.8-59.7 59.7-59.7c5 0 9.9.6 14.6 1.8v30.9a29.09 29.09 0 00-14.6-3.9c-16.2 0-29.4 13.2-29.4 29.4S77.2 172 93.4 172s29.4-13.2 29.4-29.4V16h30.2c5.8 23.6 24.2 42.4 47.6 48.6v23.7z"/>
+          <path fill="#FE2C55" d="M208 112.1v23.6c-24.7 0-47.1-8.3-65.4-22.3V144c0 33-26.8 59.7-59.7 59.7-21.1 0-39.7-10.7-50.7-27a59.36 59.36 0 0045.5 21.1c33 0 59.7-26.8 59.7-59.7V59.6c14.9 14.1 34.1 22.6 55 22.6z"/>
+          <path fill="#000" d="M208 95.9c-20.9 0-40.1-8.5-55-22.6V144c0 33-26.8 59.7-59.7 59.7S33.7 177 33.7 144.1s26.8-59.7 59.7-59.7c5 0 9.9.6 14.6 1.8v31c-4.5-2.3-9.6-3.6-14.9-3.6-18.2 0-33 14.8-33 33s14.8 33 33 33 33-14.8 33-33V16h29.4c6.3 23.1 24.9 41.3 48 47.4v32.5z"/>
+        </svg>
+      </span>
+      TikTok Profile
+    </a>
+
+    <button id="bMinus" class="btn small ghost">Matrix −</button>
+    <button id="bPlus"  class="btn small ghost">Matrix +</button>
+  </div>
+
+  <!-- Фото-герой -->
+  <figure class="hero">
+    <img class="hero-img" src="risa.jpg" alt="Risa — protected target">
+  </figure>
+
+  <section class="pane">
+    <div class="card pad"><canvas id="radar" width="900" height="400" aria-label="scanner"></canvas></div>
+    <div id="console" class="card console" role="log" aria-live="polite"></div>
+  </section>
+</div>
+
+<script>
+/* ===== MATRIX RAIN (фон) ===== */
+let MATRIX_FONT=16, GLYPHS='アイウエオカキクケコサシスセソタチツテトナニヌネノ0123456789abcdef';
+const matrix=document.getElementById('matrix'), mtx=matrix.getContext('2d');
+function sizeMatrix(){const s=devicePixelRatio||1; matrix.width=innerWidth*s; matrix.height=innerHeight*s; mtx.setTransform(s,0,0,s,0,0)}
+sizeMatrix(); addEventListener('resize', sizeMatrix);
+let columns=Math.ceil(innerWidth/MATRIX_FONT), drops=new Array(columns).fill(1);
+function rebuild(){columns=Math.ceil(innerWidth/MATRIX_FONT); drops=new Array(columns).fill(1)}
+function drawMatrix(){
+  mtx.fillStyle='rgba(2,10,8,.08)'; mtx.fillRect(0,0,innerWidth,innerHeight);
+  mtx.fillStyle='#18d8a2'; mtx.font=`${MATRIX_FONT}px ui-monospace,monospace`;
+  for(let i=0;i<drops.length;i++){
+    const t=GLYPHS.charAt(Math.floor(Math.random()*GLYPHS.length));
+    const x=i*MATRIX_FONT, y=drops[i]*MATRIX_FONT;
+    mtx.fillText(t,x,y);
+    if(y>innerHeight && Math.random()>0.975) drops[i]=0;
+    drops[i]++;
+  }
+  requestAnimationFrame(drawMatrix);
+}
+drawMatrix();
+document.getElementById('bPlus').addEventListener('click', ()=>{MATRIX_FONT=Math.min(32,MATRIX_FONT+2); rebuild()});
+document.getElementById('bMinus').addEventListener('click', ()=>{MATRIX_FONT=Math.max(10,MATRIX_FONT-2); rebuild()});
+
+/* ===== ЛОГ/кнопки ===== */
+const $=s=>document.querySelector(s), chip=$('#chip'), logBox=$('#console');
+function log(t,cls=""){const d=document.createElement('div'); d.className='log-line'; if(cls) d.classList.add(cls); d.innerHTML=t; logBox.appendChild(d); logBox.scrollTop=logBox.scrollHeight}
+['<span class="g">&gt; fingerprinting threats…</span>',
+ '<span class="g">&gt; subject located</span>: RISA @ LIVE',
+ '<span class="g">&gt; shield protocol</span>: <b>ENABLED</b>',
+ '<span class="g">&gt; escort mode</span>: on — I see you — even when you don’t.',
+ '<span class="g">&gt; link secured</span> // Telegram & TikTok ready.'].forEach(l=>log(l));
+
+$('#bShield').addEventListener('click',()=>{chip.textContent='PROTECTED'; chip.style.filter='brightness(1.2)'; setTimeout(()=>chip.style.filter='',220); log('<span class="g">&gt; matrix-shield</span>: <b>RE-ENGAGED</b>'); log('<span class="y">&gt; passive-scan</span>: OK — no hostile beacons detected.')});
+$('#bPulse').addEventListener('click',()=>{log('<span class="e">&gt; EMP-pulse</span>: <b>DISCHARGED</b> — spectrum scrub…'); flash()});
+$('#bSilent').addEventListener('click',()=>{chip.textContent='SILENT'; log('<span class="g">&gt; silent-mode</span>: <b>ENABLED</b> — escort without alerts.'); setTimeout(()=>{chip.textContent='PROTECTED'},2000)});
+
+/* ===== РАДАР ===== */
+const cv=$('#radar'), ctx=cv.getContext('2d'); let cw,ch,cx,cy,R;
+function sizeRadar(){
+  const s=devicePixelRatio||1, b=cv.getBoundingClientRect();
+  cw=Math.floor(b.width*s); ch=Math.floor(b.height*s); cv.width=cw; cv.height=ch;
+  ctx.setTransform(s,0,0,s,0,0); cx=b.width/2; cy=b.height/2; R=Math.min(b.width,b.height)*0.42;
+}
+sizeRadar(); addEventListener('resize', sizeRadar);
+const blips=[...Array(6)].map(()=>({a:Math.random()*Math.PI*2, r:0.35*R+Math.random()*0.6*R, s:.4+.6*Math.random()}));
+let theta=0, spread=.40, speed=.035;
+function radar(){
+  ctx.fillStyle='rgba(6,24,20,.08)'; ctx.fillRect(0,0,cv.width,cv.height);
+  ctx.save(); ctx.translate(cx,cy); ctx.strokeStyle='rgba(22,241,182,.25)'; ctx.lineWidth=1;
+  for(let rr=R; rr>0; rr-=R/4){ctx.beginPath(); ctx.arc(0,0,rr,0,Math.PI*2); ctx.stroke()} ctx.restore();
+  ctx.save(); ctx.translate(cx,cy);
+  const g=ctx.createRadialGradient(0,0,0,0,0,R); g.addColorStop(0,'rgba(22,241,182,.45)'); g.addColorStop(1,'rgba(22,241,182,0)');
+  ctx.fillStyle=g; ctx.beginPath(); ctx.moveTo(0,0); ctx.arc(0,0,R,theta-spread,theta+spread,false); ctx.closePath(); ctx.fill(); ctx.restore();
+  blips.forEach(b=>{const x=cx+Math.cos(b.a)*b.r, y=cy+Math.sin(b.a)*b.r;
+    const d=Math.abs(((theta-b.a+Math.PI)%(2*Math.PI))-Math.PI), hit=d<spread*1.2, a=hit?.85:.25;
+    ctx.fillStyle=`rgba(22,241,182,${a})`; ctx.beginPath(); ctx.arc(x,y,3.5*b.s,0,Math.PI*2); ctx.fill();
+    if(hit){ctx.strokeStyle=`rgba(22,241,182,${a*.7})`; ctx.beginPath(); ctx.arc(x,y,7*b.s,0,Math.PI*2); ctx.stroke();}
+  });
+  theta+=speed; if(theta>Math.PI*2) theta-=Math.PI*2; requestAnimationFrame(radar);
+}
+radar();
+
+function flash(){const f=document.createElement('div'); f.style.cssText='position:fixed;inset:0;background:radial-gradient(circle at 50% 50%, rgba(22,241,182,.35), transparent 60%);pointer-events:none;animation:fade .6s ease forwards;z-index:3'; document.body.appendChild(f); setTimeout(()=>f.remove(),600)}
+</script>
+</body>
+</html>
